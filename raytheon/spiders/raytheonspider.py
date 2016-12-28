@@ -12,7 +12,7 @@ from scrapy.exceptions import CloseSpider
 class RaytheonspiderSpider(CrawlSpider):
 
     name = "raytheonJobsStart"
-    page = 150
+    page = 1
     ajaxURL = "https://jobs.raytheon.com/search-jobs/results?ActiveFacetID=0&RecordsPerPage=15&Distance=50&RadiusUnitType=0&Keywords=&Location=&Latitude=&Longitude=&ShowRadius=False&CustomFacetName=&FacetTerm=&FacetType=0&SearchResultsModuleName=Search+Results&SearchFiltersModuleName=Search+Filters&SortCriteria=5&SortDirection=1&SearchType=5&CategoryFacetTerm=&CategoryFacetType=&LocationFacetTerm=&LocationFacetType=&KeywordType=&LocationType=&LocationPath=&OrganizationIds=&CurrentPage="
 
     def start_requests(self):
@@ -24,7 +24,6 @@ class RaytheonspiderSpider(CrawlSpider):
       jobs = response.xpath('//*[@id="search-results-list"]/ul/*/a/@href').extract()
       if jobs:
         for job_url in jobs:
-          print("This is a fucking stupid issue... FIX IT:     "+job_url)
           job_url = "https://jobs.raytheon.com" + self.__normalise(job_url)
           yield Request(url=job_url, callback=self.parse_details)
       else:
@@ -35,13 +34,12 @@ class RaytheonspiderSpider(CrawlSpider):
 
 
     def parse_details(self, response):
-      print("This is a fucking stupid issue... FIX IT:     "+str(response))
       sel = Selector(response)
       job = sel.xpath('//*[@id="content"]')
       item = RaytheonItem()
+      print "THIS IS THE DAMN OBJECT: " + str(job)
       # Populate job fields
       item['title'] = job.xpath('//*[@id="content"]/section[1]/div/h1/text()').extract()
-      jobTitle=job.xpath('//*[@id="content"]/section[1]/div/h1/text()').extract()
       item['reqid'] = job.xpath('//*[@id="content"]/section[1]/div/span[1]/text()').extract()
       item['location'] = job.xpath('//*[@id="content"]/section[1]/div/span[last()]/text()').extract()
       item['applink'] = job.xpath('//*[@id="content"]/section[1]/div/a[2]/@href').extract()
