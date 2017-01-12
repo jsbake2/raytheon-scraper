@@ -6,7 +6,20 @@ from scrapy.http.request import Request
 from raytheon.items import RaytheonItem
 from scrapy.http import HtmlResponse
 import json
+import simplejson
 from scrapy.exceptions import CloseSpider
+import re
+
+def stripUnicode(unimess):
+  if re.search('list',str(type(unimess))):
+    if len(unimess) >= 1:
+      return unimess[0].encode('utf-8').strip()
+    else:
+      return unimess
+  elif (re.search('str|uni', unimess)):
+    return unimess.encode('utf-8').strip()
+  else:
+    return unimess
 
 
 class RaytheonspiderSpider(CrawlSpider):
@@ -19,15 +32,22 @@ class RaytheonspiderSpider(CrawlSpider):
       yield Request(self.ajaxURL + str(self.page), callback=self.parse_listings)
 
     def parse_listings(self, response):
-      resp = json.loads(response.body)
-      response = Selector(text = resp['results'])
+      try:
+        resp = simplejson.loads(response.body)
+        print type(resp)
+        response = Selector(text = resp['results'])
+        print type(response)
+      except:
+        print "Error found on page: "+str(self.page)
+        self.page = self.page + 1
+        yield Request(self.ajaxURL + str(self.page), callback=self.parse_listings)        
       jobs = response.xpath('//*[@id="search-results-list"]/ul/*/a/@href').extract()
-      if jobs:
-        for job_url in jobs:
-          job_url = "https://jobs.raytheon.com" + self.__normalise(job_url)
-          yield Request(url=job_url, callback=self.parse_details)
-      else:
-        raise CloseSpider("No more pages... exiting...")
+      #if jobs:
+      for job_url in jobs:
+        job_url = "https://jobs.raytheon.com" + self.__normalise(job_url)
+        yield Request(url=job_url, callback=self.parse_details)
+      #else:
+        #raise CloseSpider("No more pages... exiting...")
       # go to next page...
       self.page = self.page + 1
       yield Request(self.ajaxURL + str(self.page), callback=self.parse_listings)
@@ -37,7 +57,6 @@ class RaytheonspiderSpider(CrawlSpider):
       sel = Selector(response)
       job = sel.xpath('//*[@id="content"]')
       item = RaytheonItem()
-      print "THIS IS THE DAMN OBJECT: " + str(job)
       # Populate job fields
       item['title'] = job.xpath('//*[@id="content"]/section[1]/div/h1/text()').extract()
       item['reqid'] = job.xpath('//*[@id="content"]/section[1]/div/span[1]/text()').extract()
@@ -46,6 +65,12 @@ class RaytheonspiderSpider(CrawlSpider):
       item['description'] = job.xpath('//*[@id="content"]/section[1]/div/div').extract()
       item['clearance'] = job.xpath('//*[@id="content"]/section[1]/div/span[5]').re(r'Type</b> <br>\r\n            (.*)</span>')
       item['clearanceAndJunk'] = job.xpath('//*[@id="content"]/section[1]/div/span[5]').extract()
+      item['title'] = stripUnicode(item['title'])
+      item['reqid'] = stripUnicode(item['reqid'])
+      item['applink'] = stripUnicode(item['applink'])
+      item['description'] = stripUnicode(item['description'])
+      item['clearance'] = stripUnicode(item['clearance'])
+      item['clearanceAndJunk'] = stripUnicode(item['clearanceAndJunk'])
       #item['page_url'] = response.url
       item = self.__normalise_item(item, response.url)
       return item
@@ -64,7 +89,6 @@ class RaytheonspiderSpider(CrawlSpider):
       return item
 
     def __normalise(self, value):
-      print self,value
       # Convert list to string
       value = value if type(value) is not list else ' '.join(value)
       # Trim leading and trailing special characters (Whitespaces, newlines, spaces, tabs, carriage returns)
