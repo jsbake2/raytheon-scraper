@@ -10,6 +10,8 @@ from sys import argv
 import companyinfo
 from companyinfo import infofiller
 import datetime
+import categories
+from categories import category
 #  clearance,description,title,reqid,applink,location,clearanceAndJunk
 #csvFile = 'csvWork.csv'
 csvFile = 'raytheonTotal.csv'
@@ -31,9 +33,9 @@ csv.register_dialect(
   lineterminator='\r\n',
   quoting=csv.QUOTE_MINIMAL)
 
-wr.writerow(['title', 'apply_url', 'job_description', 'location', 'company_name', 'company_description', 'company_website', 'company_logo', 'company_facebook', 'company_twitter', 'company_linkedin', 'career_id', 'deployment', 'travel', 'job_lat', 'job_lon', 'company_benefits', 'job_category', 'clearance', 'keywords'])
+wr.writerow(['title', 'apply_url', 'job_description', 'location', 'company_name', 'company_description', 'company_website', 'company_logo', 'company_facebook', 'company_twitter', 'company_linkedin', 'career_id', 'deployment', 'travel', 'job_lat', 'job_lon', 'company_benefits', 'job_category', 'clearance', 'keywords','author'])
 
-infoComp,infoDesc,infoSite,infoLogo,infoFace,infoTwit,infoLinked,infoBeni=companyinfo.infofiller(companyName)
+infoComp,infoDesc,infoSite,infoLogo,infoFace,infoTwit,infoLinked,infoBeni,author=companyinfo.infofiller(companyName)
 
 with open(csvFile, 'rb') as mycsv:
   data=csv.reader(mycsv, dialect='mydialect')
@@ -56,7 +58,9 @@ with open(csvFile, 'rb') as mycsv:
       keyw=keyw+' '+i
     keyw=re.sub('^ ','',keyw)    
     keyWords = keyw + ' ' + locKey
-
+    job_category = category(title,title)
+    if re.match('Other', job_category):
+      job_category = category(desc,title)
 # FINISHED LOCATION #
     if not re.match("None|^$", clearance):
-      wr.writerow([title, appUrl, desc, location, infoComp, infoDesc, infoSite, infoLogo, infoFace, infoTwit, infoLinked, req, 'UNKNOWN', 'UNKNOWN', lat, lon, infoBeni, 'UNKNOWN', clearance, keyWords])
+      wr.writerow([title, appUrl, desc, location, infoComp, infoDesc, infoSite, infoLogo, infoFace, infoTwit, infoLinked, req, 'UNKNOWN', 'UNKNOWN', lat, lon, infoBeni, job_category, clearance, keyWords, author])
